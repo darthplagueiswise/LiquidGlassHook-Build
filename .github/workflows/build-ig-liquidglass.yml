@@ -106,6 +106,6 @@ PY
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: IGLiquidGlassHook.dylib
+          asset_path: IGLiquidGlassHook/IGLiquidGlassHook.dylib
           asset_name: IGLiquidGlassHook.dylib
           asset_content_type: application/octet-stream
