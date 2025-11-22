@@ -1,11 +1,9 @@
-Package: com.nr.liquidglasshook
+Package: com.vader.liquidglasshook
 Name: LiquidGlassHook
-Version: 0.1.0
 Architecture: iphoneos-arm
-Description: Dynamic LiquidGlass tweak for Instagram (iOS 26)
-Maintainer: NR
-Author: NR
-Section: Tweaks
 Depends: mobilesubstrate
-
-
+Version: 0.1.0
+Section: Tweaks
+Maintainer: Vader
+Author: Vader
+Description: Force Instagram LiquidGlass tab bar and core LiquidGlass gates.
