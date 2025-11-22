@@ -1,25 +1,27 @@
-SDK   := $(shell xcrun --sdk iphoneos --show-sdk-path)
-CC    := $(shell xcrun --sdk iphoneos --find clang)
+TARGET := iphone:clang:17.0
+INSTALL_TARGET_PROCESSES = Instagram
+ARCHS = arm64
 
-ARCHS := -arch arm64
-IOS_DEPLOYMENT_TARGET ?= 26.0
-MIN_IOS_VER := -miphoneos-version-min=$(IOS_DEPLOYMENT_TARGET)
+include $(THEOS)/makefiles/common.mk
 
-CFLAGS  := -Os -fobjc-arc -isysroot $(SDK) $(ARCHS) $(MIN_IOS_VER)
-LDFLAGS := -dynamiclib -framework Foundation
+TWEAK_NAME = LiquidGlassHook
 
-SRCS_OBJC := IGLiquidGlassHook.m
-OBJS      := $(SRCS_OBJC:.m=.o)
+# Arquivo único com hooks + config + menu
+$(TWEAK_NAME)_FILES = src/IGLiquidGlassHook.xm
 
-TARGET := IGLiquidGlassHook.dylib
+# Frameworks usados
+$(TWEAK_NAME)_FRAMEWORKS = UIKit Foundation
 
-all: $(TARGET)
+# Usamos MobileSubstrate para MSHookFunction
+$(TWEAK_NAME)_LIBRARIES = substrate
 
-$(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
+# ARC para ObjC
+$(TWEAK_NAME)_CFLAGS = -fobjc-arc
 
-%.o: %.m
-	$(CC) $(CFLAGS) -c -o $@ $<
+include $(THEOS_MAKE_PATH)/tweak.mk
 
-clean:
-	rm -f $(OBJS) $(TARGET)
+# Alvo auxiliar para limpar
+after-install::
+	install.exec "killall -9 Instagram || true"
+
+

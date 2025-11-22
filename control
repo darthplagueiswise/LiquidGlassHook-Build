@@ -1,0 +1,11 @@
+Package: com.nr.liquidglasshook
+Name: LiquidGlassHook
+Version: 0.1.0
+Architecture: iphoneos-arm
+Description: Dynamic LiquidGlass tweak for Instagram (iOS 26)
+Maintainer: NR
+Author: NR
+Section: Tweaks
+Depends: mobilesubstrate
+
+
