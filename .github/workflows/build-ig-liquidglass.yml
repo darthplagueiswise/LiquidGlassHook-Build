@@ -89,6 +89,13 @@ PY
           name: IGLiquidGlassHook
           path: .
 
+      - name: Verify downloaded artifact contents and stage for upload
+        run: |
+          ls -R .
+          test -f IGLiquidGlassHook/IGLiquidGlassHook.dylib
+          mv IGLiquidGlassHook/IGLiquidGlassHook.dylib IGLiquidGlassHook.dylib
+          ls -l IGLiquidGlassHook.dylib
+
       - name: Create GitHub release
         id: create_release
         uses: actions/create-release@v1
@@ -106,6 +113,6 @@ PY
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: IGLiquidGlassHook.dylib
+          asset_path: ${{ github.workspace }}/IGLiquidGlassHook.dylib
           asset_name: IGLiquidGlassHook.dylib
           asset_content_type: application/octet-stream
