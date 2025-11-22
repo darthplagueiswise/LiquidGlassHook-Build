@@ -1,13 +1,9 @@
-# Makefile para compilar IGLiquidGlassHook.dylib (iOS arm64)
-#
-# Depende de:
-#   - Xcode + iPhoneOS SDK (no runner macOS)
-
 SDK   := $(shell xcrun --sdk iphoneos --show-sdk-path)
 CC    := $(shell xcrun --sdk iphoneos --find clang)
 
-ARCHS       := -arch arm64
-MIN_IOS_VER := -miphoneos-version-min=17.0
+ARCHS := -arch arm64
+IOS_DEPLOYMENT_TARGET ?= 26.0
+MIN_IOS_VER := -miphoneos-version-min=$(IOS_DEPLOYMENT_TARGET)
 
 CFLAGS  := -Os -fobjc-arc -isysroot $(SDK) $(ARCHS) $(MIN_IOS_VER)
 LDFLAGS := -dynamiclib -framework Foundation

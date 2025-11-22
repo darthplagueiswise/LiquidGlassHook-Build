@@ -14,7 +14,7 @@ Este projeto foi pensado para o seguinte fluxo:
 
 ### 1. Hooks C (gates principais de LiquidGlass)
 
-Via [fishhook](https://github.com/facebook/fishhook), são rebindadas as seguintes funções C exportadas pelo framework da Meta:
+São rebindadas, em runtime, as seguintes funções C exportadas pelo framework da Meta:
 
 - `METAIsLiquidGlassEnabled`
 - `IGIsCustomLiquidGlassTabBarEnabledForLauncherSet`
@@ -26,7 +26,7 @@ Os hooks fazem:
 - `IGIsCustomLiquidGlassTabBarEnabledForLauncherSet()` → retorna sempre `YES`.
 - `IGTabBarStyleForLauncherSet()` → retorna um estilo constante (por padrão `1`, que deve corresponder ao estilo LiquidGlass usado nos patches estáticos já validados via Ghidra).
 
-Isso substitui os patches estáticos em assembly nesses 3 símbolos, de forma que você não precisa refazer patch em cada nova versão do app enquanto os nomes dos símbolos se mantiverem.
+Isso substitui os patches estáticos em assembly nesses 3 símbolos, de forma que você não precisa refazer patch em cada nova versão do app enquanto os nomes dos símbolos se mantiverem. O rebinder é interno (não depende de fishhook ou outros submódulos).
 
 ### 2. Hooks Objective-C (flags de UI LiquidGlass)
 
@@ -48,23 +48,22 @@ A implementação percorre todas as classes registradas no runtime e, para cada 
 
 ## Estrutura do repositório
 
-- `IGLiquidGlassHook.m`  
+- `IGLiquidGlassHook.m`
   Arquivo principal da `dylib`. Contém:
-  - Hooks C via fishhook;
+  - Hooks C via rebinder interno (sem dependência externa);
   - Hooks Objective-C em selectors LiquidGlass;
   - Função marcada com `__attribute__((constructor))` que aplica todos os hooks ao carregar.
 
-- `Makefile`  
-  Script de build minimalista para compilar a `dylib` usando o `clang` e o SDK do iPhoneOS a partir do Xcode.  
-  Produz `IGLiquidGlassHook.dylib` para arquitetura `arm64`.
+- `Makefile`
+  Script de build minimalista para compilar a `dylib` usando o `clang` e o SDK do iPhoneOS a partir do Xcode.
+  Produz `IGLiquidGlassHook.dylib` para arquitetura `arm64`, com alvo mínimo configurável via `IOS_DEPLOYMENT_TARGET` (padrão `26.0`, recomendado para manter compatibilidade com releases recentes; ajuste conforme o SDK disponível, caso sua máquina/local tenha um iOS SDK anterior).
 
-- `fishhook/`  
-  Submódulo do projeto [facebook/fishhook](https://github.com/facebook/fishhook), utilizado para rebind de símbolos C (`METAIsLiquidGlassEnabled`, etc.).
-
-- `.github/workflows/build-ig-liquidglass.yml`  
+- `.github/workflows/build-ig-liquidglass.yml`
   Workflow do GitHub Actions que:
   - usa `macos-latest` (com Xcode + iPhoneOS SDK);
-  - roda `make` na raiz do repositório;
+  - resolve o deployment target solicitado (26.0 por padrão) para o máximo suportado pelo SDK disponível no runner e exporta em `IOS_DEPLOYMENT_TARGET`;
+  - roda `make` na raiz do repositório com o deployment target efetivo;
+  - inspeciona arquitetura e target mínimo com `lipo` e `otool`;
   - publica `IGLiquidGlassHook.dylib` como artifact.
 
 ## Pré-requisitos
@@ -78,14 +77,8 @@ Para build local:
 Para build remoto via GitHub Actions:
 
 - Repositório hospedado no GitHub.
-- Submódulo `fishhook` configurado (veja abaixo).
 - Workflow de Actions habilitado.
 
-## Como configurar o fishhook
+## Observações sobre dependências
 
-No repositório local, execute:
-
-```bash
-git submodule add https://github.com/facebook/fishhook.git fishhook
-git commit -m "Add fishhook submodule"
-git push
+O projeto é auto-contido e não requer submódulos adicionais. Para builds locais ou no GitHub Actions, basta ter o Xcode instalado (com o SDK iPhoneOS disponível) para que o Makefile funcione corretamente.
