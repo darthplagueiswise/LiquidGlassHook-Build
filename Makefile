@@ -2,7 +2,6 @@
 #
 # Depende de:
 #   - Xcode + iPhoneOS SDK (no runner macOS)
-#   - fishhook.c / fishhook.h na raiz do repo
 
 SDK   := $(shell xcrun --sdk iphoneos --show-sdk-path)
 CC    := $(shell xcrun --sdk iphoneos --find clang)
@@ -10,13 +9,11 @@ CC    := $(shell xcrun --sdk iphoneos --find clang)
 ARCHS       := -arch arm64
 MIN_IOS_VER := -miphoneos-version-min=17.0
 
-CFLAGS  := -Os -fobjc-arc -isysroot $(SDK) $(ARCHS) $(MIN_IOS_VER) -I.
+CFLAGS  := -Os -fobjc-arc -isysroot $(SDK) $(ARCHS) $(MIN_IOS_VER)
 LDFLAGS := -dynamiclib -framework Foundation
 
 SRCS_OBJC := IGLiquidGlassHook.m
-SRCS_C    := fishhook.c
-
-OBJS := $(SRCS_OBJC:.m=.o) $(SRCS_C:.c=.o)
+OBJS      := $(SRCS_OBJC:.m=.o)
 
 TARGET := IGLiquidGlassHook.dylib
 
@@ -26,9 +23,6 @@ $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 %.o: %.m
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-%.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
