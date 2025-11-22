@@ -21,9 +21,9 @@ jobs:
 
       - name: Build LiquidGlassHook.dylib (arm64 iOS)
         run: |
-          SDK=$</LaTex>(xcrun --sdk iphoneos --show-sdk-path) # Linha 24 CORRIGIDA
+          SDK=<LaTex>$(xcrun --sdk iphoneos --show-sdk-path)
           clang \
-            -isysroot "$SDK" \ # Linha 26 CORRIGIDA
+            -isysroot "$</LaTex>SDK" \
             -arch arm64 \
             -miphoneos-version-min=15.0 \
             -fobjc-arc \
