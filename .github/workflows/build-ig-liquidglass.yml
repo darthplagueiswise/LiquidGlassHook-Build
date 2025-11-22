@@ -92,8 +92,16 @@ PY
       - name: Verify downloaded artifact contents and stage for upload
         run: |
           ls -R .
-          test -f IGLiquidGlassHook/IGLiquidGlassHook.dylib
-          mv IGLiquidGlassHook/IGLiquidGlassHook.dylib IGLiquidGlassHook.dylib
+          if [ -f IGLiquidGlassHook.dylib ]; then
+            echo "Found dylib at workspace root"
+            :
+          elif [ -f IGLiquidGlassHook/IGLiquidGlassHook.dylib ]; then
+            echo "Found dylib under artifact directory; moving to workspace root"
+            mv IGLiquidGlassHook/IGLiquidGlassHook.dylib IGLiquidGlassHook.dylib
+          else
+            echo "IGLiquidGlassHook.dylib not found after artifact download" >&2
+            exit 1
+          fi
           ls -l IGLiquidGlassHook.dylib
 
       - name: Create GitHub release
