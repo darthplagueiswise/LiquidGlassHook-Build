@@ -3,6 +3,11 @@
 
 #import <UIKit/UIKit.h>
 
+// Logos' generated glue code may rely on standard C helpers such as strdup,
+// so include the safe C string declarations up front to avoid implicit
+// function warnings when compiling under stricter C modes on some runners.
+#include <string.h>
+
 #pragma mark - C function prototypes
 
 // These names come from FBSharedFramework; they are C-level gates.
