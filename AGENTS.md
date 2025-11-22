@@ -1,174 +1,108 @@
-# AGENTS.md – LiquidGlassHook-Build (dylib/tweak de LiquidGlass para Instagram iOS 26)
+# LiquidGlassHook-Build – Agent instructions
 
-Este repositório constrói uma **dylib/tweak para Instagram** (arm64), usada para habilitar e controlar dinamicamente o **LiquidGlass** e outras flags de UI em iOS 26+, com injeção via Theos / Substrate e sideload.
+Objective:
+- This repo builds a MobileSubstrate / Theos tweak called `IGLiquidGlassHook`
+  that forces Instagram’s LiquidGlass tab bar style and related C gates.
+- Output: a .deb and a .dylib built by GitHub Actions (macOS runner).
 
-Este arquivo é o guia principal para agentes (OpenAI Codex, Cursor, Copilot etc.).  
-Sempre siga estas instruções antes de editar ou commitar qualquer coisa aqui.
+High-level tasks for you as the agent:
 
----
+1. Repository layout (Theos-style)
+   - Ensure the repo has exactly these files at the root:
+     - `Makefile`
+     - `control`
+     - `LiquidGlassHook.plist`
+     - `AGENTS.md` (this file)
+     - `src/IGLiquidGlassHook.xm`
+     - `.github/workflows/build.yml`
 
-## 1. Ambiente de desenvolvimento
+   - Do NOT introduce extra nested projects / pods / Xcode projects.
+   - This is a single Theos tweak.
 
-- Plataforma esperada: macOS (incluindo `macos-latest` do GitHub Actions).
-- Toolchain:
-  - Theos instalado e variável `THEOS` configurada.
-  - Xcode recente (16.x ou superior).
-  - SDK iPhoneOS recente (por ex. `iPhoneOS18.x.sdk`).
-- Arquitetura alvo:
-  - `arm64` (dispositivos físicos, ex.: iPhone 15 Pro Max).
-- Versão mínima de iOS:
-  - `-miphoneos-version-min=17.0` ou superior, conforme `TARGET` no Makefile.
+2. Makefile
+   - Create / overwrite `Makefile` with a minimal Theos tweak configuration:
 
-Dependências lógicas:
+     - Uses `THEOS` / `THEOS_MAKE_PATH` (no hardcoded absolute paths).
+     - Builds for `arm64` only.
+     - Target minimum iOS 17.0 (works for iOS 17–26).
+     - Tweak name: `IGLiquidGlassHook`.
+     - Source file: `src/IGLiquidGlassHook.xm`.
+     - Install target process: Instagram (`com.burbn.instagram`).
 
-- MobileSubstrate (`mobilesubstrate`) para `MSHookFunction` (hook de C).
-- UIKit / Foundation.
+3. Tweak logic (src/IGLiquidGlassHook.xm)
+   - Implement Logos-based hooks (no fishhook, no manual Mach-O walking).
+   - Only rely on MobileSubstrate / Logos primitives.
 
----
+   - Hook these C functions and force LiquidGlass:
 
-## 2. Comandos de build e validação
+     1) `BOOL METAIsLiquidGlassEnabled(void);`
+        - Return YES unconditionally.
 
-Da raiz do repositório:
+     2) `BOOL IGIsCustomLiquidGlassTabBarEnabledForLauncherSet(void);`
+        - Return YES unconditionally.
 
-1. Limpar build anterior:
-   ```bash
-   make clean
+     3) `NSInteger IGTabBarStyleForLauncherSet(void);`
+        - Return a constant style value that selects the LiquidGlass style.
+        - Use value `1` as the forced style (this matches prior manual patches).
 
-2.Compilar o tweak/dylib:
+   - Additionally, try to hook the LiquidGlass boolean helpers, but make
+     the code defensive so the tweak still loads even if a symbol is missing:
 
-make
+     - Candidate signatures:
 
-•Isso usa Theos e o Makefile para gerar .theos/obj/debug/LiquidGlassHook.dylib e/ou pacotes .deb (dependendo da configuração atual do Theos).
+       `BOOL isLiquidGlassContextMenuEnabled(id self, SEL _cmd);`
+       `BOOL isLiquidGlassInAppNotificationEnabled(id self, SEL _cmd);`
+       `BOOL isLiquidGlassToastEnabled(id self, SEL _cmd);`
+       `BOOL isLiquidGlassToastPeekEnabled(id self, SEL _cmd);`
+       `BOOL isLiquidGlassAlertDialogEnabled(id self, SEL _cmd);`
 
-3.Verificar o binário gerado (sanity check):
-Ajuste o caminho conforme necessário (por ex. o output final da dylib):
+     - Implement these as Logos `%hook` blocks only if the class is known.
+       If the exact class cannot be determined reliably, skip them instead
+       of guessing. Do NOT break the build over them.
 
-file .theos/obj/debug/LiquidGlassHook.dylib
-otool -L .theos/obj/debug/LiquidGlassHook.dylib
-otool -hV .theos/obj/debug/LiquidGlassHook.dylib
+   - The tweak MUST compile cleanly with Theos on a macOS runner with Xcode 16.
 
-Esperado:
-•file: deve mostrar Mach-O 64-bit dynamically linked shared library arm64.
-•otool -L: dependências padrão (UIKit, Foundation, Substrate, etc.).
-•otool -hV: cabeçalho MH_DYLIB, arquitetura ARM64.
+4. Package metadata (`control`)
+   - Create / overwrite `control` with a valid Debian control file, e.g.:
 
-4.Somente considere o trabalho concluído se:
-•make clean && make termina sem erros.
-•O binário passa nos checks acima.
+     - Package: `com.vader.liquidglasshook`
+     - Name: `LiquidGlassHook`
+     - Architecture: `iphoneos-arm`
+     - Depends: `mobilesubstrate`
+     - Section: `Tweaks`
+     - Version: `0.1.0`
+     - Maintainer and Author: use “Vader” as placeholder.
+     - Short description: “Force Instagram LiquidGlass UI flags.”
 
-Se qualquer comando falhar, corrija o código (não altere os comandos aqui sem necessidade forte) e repita.
+5. Filter plist (`LiquidGlassHook.plist`)
+   - Create / overwrite `LiquidGlassHook.plist` with a standard Substrate filter
+     that only injects into Instagram:
 
----
+     - Bundles: `com.burbn.instagram`
 
-3. Estrutura do projeto
+6. GitHub Actions workflow
+   - Create / overwrite `.github/workflows/build.yml` with a workflow that:
+     - Runs on `macos-13` (or newer).
+     - On `push` to `main` or `master` and on `workflow_dispatch`.
+     - Installs Theos in `$HOME/theos` via `git clone --recursive`.
+     - Exports `THEOS` and `THEOS_MAKE_PATH`.
+     - Runs `make package` in the repo root.
+     - Uploads resulting `.deb` (and optionally `.dylib` if present) as
+       an artifact named `LiquidGlassHook-build`.
 
-Estrutura típica deste repo:
+7. Testing / validation
+   - You CANNOT actually run iOS binaries here, but you CAN verify:
+     - `make package` exits with status 0.
+     - The build produces at least one `.deb` under `./packages`.
+   - If `make package` fails, fix the underlying error in the tweak
+     sources or Makefile until the build passes.
 
-/
-├─ AGENTS.md
-├─ Makefile
-├─ control
-├─ LiquidGlassHook.plist
-└─ src/
-   └─ IGLiquidGlassHook.xm
+8. Do NOT:
+   - Do not introduce fishhook, custom Mach-O scanners, or manual trampolines.
+   - Do not depend on external submodules beyond Theos itself.
+   - Do not change the repo into a multi-tweak project.
 
-•Makefile: define o tweak Theos (TWEAK_NAME = LiquidGlassHook).
-•LiquidGlassHook.plist: filtro de injeção (Instagram).
-•control: metadados estilo .deb (nome, id, depends).
-•src/IGLiquidGlassHook.xm: lógica principal de:
-•Configuração dinâmica (NSUserDefaults).
-•Hooks C via MobileSubstrate (LiquidGlass gates).
-•Hooks de selectors ObjC (isLiquidGlass*Enabled etc.).
-•Menu interativo acionado por long press no botão de “mais/configurações” do perfil.
-
----
-
-4. Convenções de hooks e configuração
-
-Funções C típicas que podem ser hookadas (quando presentes no alvo):
-•METAIsLiquidGlassEnabled
-•IGIsCustomLiquidGlassTabBarEnabledForLauncherSet
-•IGTabBarStyleForLauncherSet
-
-Regras:
-•Não altere as assinaturas dessas funções.
-•Hooks C devem ser estáveis: preferencialmente wrappers que:
-•consultam flags dinâmicas (config), e
-•chamam o original quando a flag estiver desligada.
-
-Selectors relevantes de LiquidGlass e UI:
-•isLiquidGlassContextMenuEnabled
-•isLiquidGlassInAppNotificationEnabled
-•isLiquidGlassToastEnabled
-•isLiquidGlassToastPeekEnabled
-•isLiquidGlassAlertDialogEnabled
-•shouldMitigateLiquidGlassYOffset
-
-Regras:
-•Usar runtime ObjC (objc_getClassList, class_getInstanceMethod, method_setImplementation) para aplicar hooks nesses selectors.
-•É aceitável usar wrappers simples que retornem sempre YES/NO, mas preferencialmente a lógica deve consultar configurações dinâmicas se estas estiverem disponíveis.
-
-A configuração de runtime é centralizada em LGLiquidGlassConfig dentro de IGLiquidGlassHook.xm, usando NSUserDefaults e uma keychain simples de keys (LGLGCoreEnabled, LGLGExtendedUIEnabled, LGLGDebugEnabled).
-
----
-
-5. Menu interativo (long press no botão de configurações)
-
-O tweak expõe um menu interativo ao:
-•Fazer long press (~1s) no botão de “more/settings” do perfil no Instagram, detectado por:
-•Classe Instagram IGBadgedNavigationButton.
-•accessibilityIdentifier == "profile-more-button".
-
-O menu é um UIAlertController com ações para:
-•Alternar:
-•“Core LiquidGlass” (enable/disable).
-•“Extended UI” (extras de LiquidGlass).
-•“Debug log” (liga/desliga logs internos).
-•Mostrar estados atuais (ON/OFF).
-
-Hooks de C e de selectors devem ler essas flags sempre que possível, para permitir ajuste “em tempo real” sem reinstalar o tweak (dentro das limitações do hook).
-
----
-
-6. Instruções específicas para agentes (Codex, Cursor, Copilot, etc.)
-
-Quando você (agente) trabalhar neste repositório:
-1.Leia o AGENTS.md antes de qualquer modificação.
-2.Confirme a estrutura: Makefile, LiquidGlassHook.plist, control, src/IGLiquidGlassHook.xm.
-3.Ao implementar ou modificar hooks:
-•Preserve assinaturas de funções C.
-•Mantenha a lógica de configuração dinâmica centralizada em LGLiquidGlassConfig.
-•Sempre considere o impacto em iOS 26+ e arm64.
-4.Sempre rode:
-
-make clean
-make
-file .theos/obj/debug/LiquidGlassHook.dylib
-otool -L .theos/obj/debug/LiquidGlassHook.dylib
-
-
-5.Commits:
-•Mensagens claras, ex.:
-•Implement dynamic LiquidGlass C gates
-•Add long-press settings menu for LiquidGlass
-•Se abrir PR:
-•Descreva mudanças, comandos rodados, e limitações conhecidas.
-6.Não crie branches novas a menos que explicitamente solicitado.
-Trabalhe na branch padrão (main/master) ou na branch indicada pelo usuário.
-
----
-
-7. Adaptação futura
-
-Se forem adicionados:
-•Novos gates C (novas funções de feature flag).
-•Novos selectors de UI.
-
-Atualize:
-•LGLiquidGlassConfig (novas keys, se necessário).
-•Tabelas de selectors/funções dentro de IGLiquidGlassHook.xm.
-•Este AGENTS.md, para refletir o fluxo real de build/hook/teste.
-
-Mantenha este arquivo como fonte de verdade sobre como mexer neste tweak.
-
----
+The final state we want:
+- A clean Theos tweak repo that builds successfully on GitHub Actions,
+  producing a `.deb` with a tweak that forces Instagram’s LiquidGlass
+  tab bar via C-level gates, without hardcoded absolute paths.
