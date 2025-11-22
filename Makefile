@@ -1,8 +1,8 @@
 # Makefile para compilar IGLiquidGlassHook.dylib (iOS arm64)
 #
 # Depende de:
-#   - Xcode + iPhoneOS SDK instalados (no runner macOS)
-#   - fishhook como submódulo em ./fishhook
+#   - Xcode + iPhoneOS SDK (no runner macOS)
+#   - fishhook.c / fishhook.h na raiz do repo
 
 SDK   := $(shell xcrun --sdk iphoneos --show-sdk-path)
 CC    := $(shell xcrun --sdk iphoneos --find clang)
@@ -10,11 +10,11 @@ CC    := $(shell xcrun --sdk iphoneos --find clang)
 ARCHS       := -arch arm64
 MIN_IOS_VER := -miphoneos-version-min=17.0
 
-CFLAGS  := -Os -fobjc-arc -isysroot $(SDK) $(ARCHS) $(MIN_IOS_VER) -Ifishhook
+CFLAGS  := -Os -fobjc-arc -isysroot $(SDK) $(ARCHS) $(MIN_IOS_VER) -I.
 LDFLAGS := -dynamiclib -framework Foundation
 
 SRCS_OBJC := IGLiquidGlassHook.m
-SRCS_C    := fishhook/fishhook.c
+SRCS_C    := fishhook.c
 
 OBJS := $(SRCS_OBJC:.m=.o) $(SRCS_C:.c=.o)
 
