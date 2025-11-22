@@ -57,7 +57,7 @@ PY
       - name: Show SDKs (debug)
         run: xcodebuild -showsdks
 
-      - name: Build dylib via Makefile
+      - name: Build dylib trought Makefile
         run: |
           make clean
           make IOS_DEPLOYMENT_TARGET=${IOS_DEPLOYMENT_TARGET}
