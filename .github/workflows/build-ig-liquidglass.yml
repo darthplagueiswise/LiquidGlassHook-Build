@@ -89,6 +89,21 @@ PY
           name: IGLiquidGlassHook
           path: .
 
+      - name: Verify downloaded artifact contents and stage for upload
+        run: |
+          ls -R .
+          if [ -f IGLiquidGlassHook.dylib ]; then
+            echo "Found dylib at workspace root"
+            :
+          elif [ -f IGLiquidGlassHook/IGLiquidGlassHook.dylib ]; then
+            echo "Found dylib under artifact directory; moving to workspace root"
+            mv IGLiquidGlassHook/IGLiquidGlassHook.dylib IGLiquidGlassHook.dylib
+          else
+            echo "IGLiquidGlassHook.dylib not found after artifact download" >&2
+            exit 1
+          fi
+          ls -l IGLiquidGlassHook.dylib
+
       - name: Create GitHub release
         id: create_release
         uses: actions/create-release@v1
@@ -106,6 +121,7 @@ PY
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ github.workspace }}/IGLiquidGlassHook.dylib
           asset_path: IGLiquidGlassHook/IGLiquidGlassHook.dylib
           asset_name: IGLiquidGlassHook.dylib
           asset_content_type: application/octet-stream
