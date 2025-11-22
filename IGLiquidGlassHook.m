@@ -18,6 +18,7 @@
 
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
+#import <dispatch/dispatch.h>
 #import <mach-o/dyld.h>
 #import <mach-o/loader.h>
 #import <mach-o/nlist.h>
@@ -42,7 +43,7 @@ typedef struct {
     void      **replaced;
 } LGRebinding;
 
-static LGRebinding *lg_rebindings = NULL;
+static LGRebinding *lg_rebindings      = NULL;
 static size_t       lg_rebindings_count = 0;
 
 static void lg_rebind_for_image(const struct mach_header *mh, intptr_t slide) {
@@ -52,11 +53,11 @@ static void lg_rebind_for_image(const struct mach_header *mh, intptr_t slide) {
 #else
     const struct mach_header_64 *header = (const struct mach_header_64 *)mh;
 
-    const struct load_command    *lc = NULL;
-    const struct segment_command_64 *seg_cmd = NULL;
-    const struct segment_command_64 *linkedit = NULL;
-    const struct symtab_command     *symtab_cmd = NULL;
-    const struct dysymtab_command   *dysymtab_cmd = NULL;
+    const struct load_command          *lc       = NULL;
+    const struct segment_command_64    *seg_cmd  = NULL;
+    const struct symtab_command        *symtab_cmd   = NULL;
+    const struct dysymtab_command      *dysymtab_cmd = NULL;
+    const struct segment_command_64    *linkedit     = NULL;
 
     uintptr_t cursor = (uintptr_t)header + sizeof(struct mach_header_64);
 
@@ -85,10 +86,12 @@ static void lg_rebind_for_image(const struct mach_header *mh, intptr_t slide) {
                               linkedit->vmaddr -
                               linkedit->fileoff;
 
-    struct nlist_64 *symtab = (struct nlist_64 *)(linkedit_base + symtab_cmd->symoff);
-    char            *strtab = (char *)(linkedit_base + symtab_cmd->stroff);
-    uint32_t        *indirect_symtab = (uint32_t *)(linkedit_base + dysymtab_cmd->indirectsymoff);
+    struct nlist_64 *symtab        = (struct nlist_64 *)(linkedit_base + symtab_cmd->symoff);
+    char            *strtab        = (char *)(linkedit_base + symtab_cmd->stroff);
+    uint32_t        *indirect_symt = (uint32_t *)(linkedit_base + dysymtab_cmd->indirectsymoff);
 
+    // Percorrer TODOS os segmentos e TODAS as seções;
+    // aplicar rebinding apenas em seções de ponteiros de símbolos.
     cursor = (uintptr_t)header + sizeof(struct mach_header_64);
     for (uint32_t i = 0; i < header->ncmds; i++) {
         lc = (const struct load_command *)cursor;
@@ -96,14 +99,8 @@ static void lg_rebind_for_image(const struct mach_header *mh, intptr_t slide) {
         if (lc->cmd == LC_SEGMENT_64) {
             seg_cmd = (const struct segment_command_64 *)cursor;
 
-            // Procurar seções de ponteiros de símbolo em __DATA / __DATA_CONST
-            if (strcmp(seg_cmd->segname, SEG_DATA) != 0 &&
-                strcmp(seg_cmd->segname, SEG_DATA_CONST) != 0) {
-                cursor += lc->cmdsize;
-                continue;
-            }
-
-            const struct section_64 *sect = (const struct section_64 *)(seg_cmd + 1);
+            const struct section_64 *sect =
+                (const struct section_64 *)(seg_cmd + 1);
 
             for (uint32_t j = 0; j < seg_cmd->nsects; j++, sect++) {
                 uint32_t type = sect->flags & SECTION_TYPE;
@@ -112,9 +109,12 @@ static void lg_rebind_for_image(const struct mach_header *mh, intptr_t slide) {
                     continue;
                 }
 
-                uint32_t *indirect_indices = indirect_symtab + sect->reserved1;
-                void    **symbol_bindings  = (void **)((uintptr_t)slide + sect->addr);
-                uint64_t  bind_count       = sect->size / sizeof(void *);
+                uint32_t *indirect_indices =
+                    indirect_symt + sect->reserved1;
+                void    **symbol_bindings =
+                    (void **)((uintptr_t)slide + sect->addr);
+                uint64_t  bind_count =
+                    sect->size / sizeof(void *);
 
                 for (uint64_t k = 0; k < bind_count; k++) {
                     uint32_t sym_index = indirect_indices[k];
@@ -131,8 +131,7 @@ static void lg_rebind_for_image(const struct mach_header *mh, intptr_t slide) {
                     const char *sym_name = strtab + sym.n_un.n_strx;
                     if (!sym_name || sym_name[0] != '_') continue;
 
-                    // Comparar com nossos nomes (sem o '_')
-                    const char *trimmed = sym_name + 1;
+                    const char *trimmed = sym_name + 1; // pular '_'
 
                     for (size_t r = 0; r < lg_rebindings_count; r++) {
                         LGRebinding *reb = &lg_rebindings[r];
@@ -157,15 +156,18 @@ static void lg_dyld_callback(const struct mach_header *mh, intptr_t slide) {
 }
 
 static int lg_rebind_symbols(LGRebinding rebs[], size_t count) {
-    // Expandir vetor global
     size_t new_count = lg_rebindings_count + count;
     LGRebinding *new_array = malloc(sizeof(LGRebinding) * new_count);
     if (!new_array) return -1;
 
     if (lg_rebindings && lg_rebindings_count > 0) {
-        memcpy(new_array, lg_rebindings, sizeof(LGRebinding) * lg_rebindings_count);
+        memcpy(new_array,
+               lg_rebindings,
+               sizeof(LGRebinding) * lg_rebindings_count);
     }
-    memcpy(new_array + lg_rebindings_count, rebs, sizeof(LGRebinding) * count);
+    memcpy(new_array + lg_rebindings_count,
+           rebs,
+           sizeof(LGRebinding) * count);
 
     free(lg_rebindings);
     lg_rebindings = new_array;
@@ -175,7 +177,6 @@ static int lg_rebind_symbols(LGRebinding rebs[], size_t count) {
     dispatch_once(&onceToken, ^{
         _dyld_register_func_for_add_image(lg_dyld_callback);
 
-        // Também aplicar em imagens já carregadas
         uint32_t image_count = _dyld_image_count();
         for (uint32_t i = 0; i < image_count; i++) {
             const struct mach_header *mh = _dyld_get_image_header(i);
