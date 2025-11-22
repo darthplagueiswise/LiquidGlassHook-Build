@@ -1,17 +1,59 @@
-name: Build IGLiquidGlassHook.dylib
+name: Build and Release IGLiquidGlassHook.dylib
 
 on:
   push:
     branches: [ main, master ]
+    tags: [ "v*" ]
   workflow_dispatch: {}
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: macos-latest
-
+    env:
+      REQUESTED_IOS_DEPLOYMENT_TARGET: 26.0
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          clean: true
+          fetch-depth: 0
+
+      - name: Resolve deployment target (cap to available SDK)
+        shell: bash
+        run: |
+          SDK_VERSION="$(xcrun --sdk iphoneos --show-sdk-version)"
+          echo "SDK_VERSION=${SDK_VERSION}"
+          echo "REQUESTED_IOS_DEPLOYMENT_TARGET=${REQUESTED_IOS_DEPLOYMENT_TARGET}"
+
+          python - <<'PY'
+import os
+
+req = os.environ["REQUESTED_IOS_DEPLOYMENT_TARGET"].strip()
+sdk = os.environ["SDK_VERSION"].strip()
+
+def to_tuple(ver: str):
+    return tuple(int(part) for part in ver.split("."))
+
+eff = req
+if to_tuple(req) > to_tuple(sdk):
+    eff = sdk
+
+print(f"Resolved IOS_DEPLOYMENT_TARGET={eff}")
+with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as fh:
+    fh.write(f"IOS_DEPLOYMENT_TARGET={eff}\n")
+PY
+
+      - name: Sanity – show HEAD & grep token
+        run: |
+          git rev-parse --short HEAD
+          ls -la
+          echo "---- grep SEG_DATA_CONST ----"
+          grep -Rni "SEG_DATA_CONST" . || true
+          echo "---- head IGLiquidGlassHook.m ----"
+          sed -n '1,160p' IGLiquidGlassHook.m
 
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode.app
@@ -22,10 +64,47 @@ jobs:
       - name: Build dylib via Makefile
         run: |
           make clean
-          make
+          make IOS_DEPLOYMENT_TARGET=${IOS_DEPLOYMENT_TARGET}
+
+      - name: Inspect artifact (arch + min iOS)
+        run: |
+          ls -l IGLiquidGlassHook.dylib
+          lipo -info IGLiquidGlassHook.dylib
+          otool -l IGLiquidGlassHook.dylib | sed -n '1,120p'
 
       - name: Upload dylib artifact
         uses: actions/upload-artifact@v4
         with:
           name: IGLiquidGlassHook
           path: IGLiquidGlassHook.dylib
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: IGLiquidGlassHook
+
+      - name: Create GitHub release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: IGLiquidGlassHook ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+
+      - name: Upload dylib asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: IGLiquidGlassHook.dylib
+          asset_name: IGLiquidGlassHook.dylib
+          asset_content_type: application/octet-stream
