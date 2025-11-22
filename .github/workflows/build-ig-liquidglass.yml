@@ -1,0 +1,33 @@
+name: Build IGLiquidGlassHook.dylib
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Show SDKs (debug)
+        run: xcodebuild -showsdks
+
+      - name: Build dylib via Makefile
+        run: |
+          make clean
+          make
+
+      - name: Upload dylib artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: IGLiquidGlassHook
+          path: IGLiquidGlassHook.dylib
