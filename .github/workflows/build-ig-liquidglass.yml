@@ -87,6 +87,7 @@ PY
         uses: actions/download-artifact@v4
         with:
           name: IGLiquidGlassHook
+          path: .
 
       - name: Create GitHub release
         id: create_release
