@@ -1,27 +1,15 @@
-TARGET := iphone:clang:17.0
-INSTALL_TARGET_PROCESSES = Instagram
 ARCHS = arm64
+TARGET = iphone:clang:latest:17.0
+
+THEOS_DEVICE_IP = localhost
+
+INSTALL_TARGET_PROCESSES = Instagram
 
 include $(THEOS)/makefiles/common.mk
 
-TWEAK_NAME = LiquidGlassHook
+TWEAK_NAME = IGLiquidGlassHook
 
-# Arquivo único com hooks + config + menu
-$(TWEAK_NAME)_FILES = src/IGLiquidGlassHook.xm
-
-# Frameworks usados
-$(TWEAK_NAME)_FRAMEWORKS = UIKit Foundation
-
-# Usamos MobileSubstrate para MSHookFunction
-$(TWEAK_NAME)_LIBRARIES = substrate
-
-# ARC para ObjC
-$(TWEAK_NAME)_CFLAGS = -fobjc-arc
+IGLiquidGlassHook_FILES  = src/IGLiquidGlassHook.xm
+IGLiquidGlassHook_CFLAGS = -fobjc-arc
 
 include $(THEOS_MAKE_PATH)/tweak.mk
-
-# Alvo auxiliar para limpar
-after-install::
-	install.exec "killall -9 Instagram || true"
-
-
