@@ -18,7 +18,7 @@
 
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
-#import "fishhook/fishhook.h"   // fishhook como submódulo: github.com/facebook/fishhook
+#import "fishhook.h"   // AGORA: fishhook.h na raiz do repo
 
 #pragma mark - Logging auxiliar
 
