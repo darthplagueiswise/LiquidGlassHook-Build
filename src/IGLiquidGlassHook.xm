@@ -12,7 +12,10 @@
 
 %hookf(NSInteger, IGTabBarStyleForLauncherSet)
 {
-    return 1;
+    void *symbol = MSFindSymbol(NULL, name);
+    if (symbol != NULL) {
+        MSHookFunction(symbol, replace, original);
+    }
 }
 
 %ctor {}
