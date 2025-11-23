@@ -12,5 +12,6 @@ TWEAK_NAME = IGLiquidGlassHook
 IGLiquidGlassHook_FILES = src/IGLiquidGlassHook.xm
 IGLiquidGlassHook_FRAMEWORKS = UIKit Foundation
 IGLiquidGlassHook_CFLAGS += -fobjc-arc
+IGLiquidGlassHook_LDFLAGS += -undefined dynamic_lookup
 
 include $(THEOS_MAKE_PATH)/tweak.mk
