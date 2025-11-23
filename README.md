@@ -1,27 +1,20 @@
-# LiquidGlassHook
+## LiquidGlassHook
 
-A simple Theos tweak that forces Instagram's LiquidGlass UI gates on modern iOS versions.
+A Theos tweak that forces Instagram's LiquidGlass UI gates on iOS 17+.
 
-## What it does
-- Hooks the three LiquidGlass C gates and always enables them:
-  - `METAIsLiquidGlassEnabled`
-  - `IGIsCustomLiquidGlassTabBarEnabledForLauncherSet`
-  - `IGTabBarStyleForLauncherSet` (returns style `1`)
-- Optional Instagram selector helpers are not hooked because their owning classes are
-  not reliably identified; the tweak favors stability over guessing.
+### What it does
+- Hooks the C gates `METAIsLiquidGlassEnabled`, `IGIsCustomLiquidGlassTabBarEnabledForLauncherSet`, and `IGTabBarStyleForLauncherSet` via Logos and returns values that keep LiquidGlass enabled.
+- Targets only the Instagram bundle (`com.burbn.instagram`).
 
-## Building locally
+### Building locally
 ```bash
 git clone https://github.com/youruser/LiquidGlassHook-Build
 cd LiquidGlassHook-Build
-export THEOS="$HOME/theos"
-make package    # outputs ./packages/*.deb
+export THEOS=~/theos
+make package
 ```
 
-## Installation
-Install the generated `.deb` on a jailbroken device or inject the built
-`IGLiquidGlassHook.dylib` into Instagram (`com.burbn.instagram`).
+The resulting Debian package will be located in `./packages`.
 
-## CI
-GitHub Actions (macOS) clones Theos, exports the required environment variables,
-builds the package with `make package`, and uploads the resulting artifacts.
+### Installation
+Install the generated `.deb` on a jailbroken device or inject the resulting dylib into Instagram using your preferred loader.
