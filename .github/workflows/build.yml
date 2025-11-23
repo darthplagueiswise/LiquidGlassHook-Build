@@ -13,6 +13,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install build dependencies
+        run: |
+          brew install ldid dpkg
+
       - name: Set up Theos
         run: |
           git clone --recursive https://github.com/theos/theos.git "$HOME/theos"
@@ -27,7 +31,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: LiquidGlassHook-build
-          path: |
-            packages/*.deb
-            ./*.dylib
+          path: packages/*.deb
           if-no-files-found: error
+
+      - name: Upload optional dylib artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: LiquidGlassHook-dylibs
+          path: ./*.dylib
+          if-no-files-found: ignore
