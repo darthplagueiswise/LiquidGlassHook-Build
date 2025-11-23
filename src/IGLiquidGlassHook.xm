@@ -1,21 +1,16 @@
 #import <Foundation/Foundation.h>
 
-%hookf(BOOL, METAIsLiquidGlassEnabled)
-{
+typedef NSInteger IGTabBarStyle;
+static const IGTabBarStyle IGTabBarStyleLiquidGlass = 2;
+
+%hookf(BOOL, METAIsLiquidGlassEnabled) {
     return YES;
 }
 
-%hookf(BOOL, IGIsCustomLiquidGlassTabBarEnabledForLauncherSet)
-{
+%hookf(BOOL, IGIsCustomLiquidGlassTabBarEnabledForLauncherSet, id launcherSet) {
     return YES;
 }
 
-%hookf(NSInteger, IGTabBarStyleForLauncherSet)
-{
-    void *symbol = MSFindSymbol(NULL, name);
-    if (symbol != NULL) {
-        MSHookFunction(symbol, replace, original);
-    }
+%hookf(IGTabBarStyle, IGTabBarStyleForLauncherSet, id launcherSet) {
+    return IGTabBarStyleLiquidGlass;
 }
-
-%ctor {}
