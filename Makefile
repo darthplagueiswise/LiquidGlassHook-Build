@@ -1,13 +1,17 @@
-TARGET = iphone:clang:latest:17.0
-ARCHS = arm64
+TARGET := iphone:clang:latest
+ARCHS  := arm64
+
+INSTALL_TARGET_PROCESSES = Instagram
 
 include $(THEOS)/makefiles/common.mk
 
-TWEAK_NAME = IGLiquidGlassHook
-IGLiquidGlassHook_FILES = src/IGLiquidGlassHook.xm
-IGLiquidGlassHook_INSTALL_TARGET_PROCESSES = com.burbn.instagram
+TWEAK_NAME = LiquidGlassHook
+
+$(TWEAK_NAME)_FILES      = $(wildcard src/*.xm)
+$(TWEAK_NAME)_FRAMEWORKS = UIKit Foundation
+$(TWEAK_NAME)_CFLAGS     = -fobjc-arc
 
 include $(THEOS_MAKE_PATH)/tweak.mk
 
 after-install::
-@echo "✅  Installed LiquidGlassHook"
+	@echo "✅  Installed LiquidGlassHook"

@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-tweak:
-    runs-on: macos-13
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -21,9 +21,10 @@ jobs:
 
       - name: Build tweak
         run: |
-          make package
+          make clean
+          make package FINALPACKAGE=1
 
-      - name: Upload artefacts
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: LiquidGlassHook-build
@@ -31,8 +32,3 @@ jobs:
             packages/*.deb
             .theos/obj/*.dylib
           if-no-files-found: ignore
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: LiquidGlassHook-build
-          path: packages/*.deb
