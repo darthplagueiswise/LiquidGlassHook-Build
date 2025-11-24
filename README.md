@@ -1,22 +1,45 @@
-## LiquidGlassHook
+# LiquidGlassIGHook (fishhook-only)
 
-A Theos tweak that forces Instagram's internal LiquidGlass UI gates on iOS.
+Standalone dylib (Objective-C + C) that hooks Instagram’s internal
+LiquidGlass gates so the tab bar always uses the LiquidGlass style.
 
-### What it does
-- Hooks the C gates `METAIsLiquidGlassEnabled`, `IGIsCustomLiquidGlassTabBarEnabledForLauncherSet`, and `IGTabBarStyleForLauncherSet` via Logos and returns values that keep LiquidGlass enabled.
-- Targets only the Instagram bundle (`com.burbn.instagram`).
+* **Injected path** – `@executable_path/Frameworks/LiquidGlassIGHook.dylib`
+* **Hook technique** – [`facebook/fishhook`](https://github.com/facebook/fishhook)
 
-### Building
-```
-# Set up Theos beforehand
-export THEOS=~/theos
-export THEOS_MAKE_PATH=$THEOS/makefiles
+## Build
 
+```bash
 make clean
-make package FINALPACKAGE=1
+make          # produces LiquidGlassIGHook.dylib
+
+Requires Xcode-command-line tools; the Makefile auto-detects the iPhoneOS SDK.
+
+Injection
+1.Copy the dylib to Payload/Instagram.app/Frameworks/.
+2.Add an LC_LOAD_DYLIB load command pointing to
+@executable_path/Frameworks/LiquidGlassIGHook.dylib.
+3.Re-sign the app bundle and the dylib.
 ```
 
-The resulting Debian package will be located in `./packages`, and the built dylib will be under `.theos/obj/`.
+### Makefile
+```makefile
+# Stand-alone Makefile (no Theos, no Logos)
 
-### Installation
-Install the generated `.deb` on a jailbroken device or inject the resulting dylib into Instagram using your preferred loader.
+SDK     := $(shell xcrun --sdk iphoneos --show-sdk-path)
+CC      := xcrun --sdk iphoneos clang
+CFLAGS  := -Os -fobjc-arc -isysroot $(SDK) -arch arm64 -miphoneos-version-min=17.0 -Ifishhook
+LDFLAGS := -dynamiclib -isysroot $(SDK) -arch arm64 \
+           -framework Foundation -framework UIKit \
+           -install_name @rpath/LiquidGlassIGHook.dylib
+
+TARGET  := LiquidGlassIGHook.dylib
+SRC     := LiquidGlassIGHook.m fishhook/fishhook.c
+
+all: $(TARGET)
+
+$(TARGET): $(SRC)
+$(CC) $(CFLAGS) $(SRC) -o $@ $(LDFLAGS)
+
+clean:
+rm -f $(TARGET) *.o
+```

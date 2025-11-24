@@ -2,33 +2,25 @@ name: build
 
 on:
   push:
-    branches: ["main", "master"]
-  workflow_dispatch: {}
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  build-tweak:
-    runs-on: macos-latest
+  build:
+    runs-on: macos-15-arm64
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: true       # pulls facebook/fishhook
 
-      - name: Set up Theos
-        run: |
-          git clone --recursive https://github.com/theos/theos.git "$HOME/theos"
-          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
-          echo "THEOS_MAKE_PATH=$HOME/theos/makefiles" >> $GITHUB_ENV
-
-      - name: Build tweak
+      - name: Build dylib
         run: |
           make clean
-          make package FINALPACKAGE=1
+          make
 
-      - name: Upload artifacts
+      - name: Upload dylib
         uses: actions/upload-artifact@v4
         with:
-          name: LiquidGlassHook-build
-          path: |
-            packages/*.deb
-            .theos/obj/**/*.dylib
-          if-no-files-found: ignore
+          name: LiquidGlassIGHook-dylib
+          path: LiquidGlassIGHook.dylib
