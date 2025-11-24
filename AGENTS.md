@@ -19,6 +19,7 @@ LiquidGlass UI gates ON. No Theos, Logos or MobileSubstrate are allowed.
 * **Output** exactly one file → `LiquidGlassIGHook.dylib`
   * `install_name` **must** be `@rpath/LiquidGlassIGHook.dylib`.
 * **GitHub Actions** uploads the dylib artifact as `LiquidGlassIGHook-dylib`.
+* **Workflow runner** must always be `macos-latest` (do not change this back to any other runner).
 
 ### Permissions and process
 * Codex Agent has full read/write access, including committing changes and merging PRs.
