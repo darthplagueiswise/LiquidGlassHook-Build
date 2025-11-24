@@ -1,9 +1,0 @@
-Package: com.vader.liquidglasshook
-Name: LiquidGlassHook
-Version: 0.1.0
-Architecture: iphoneos-arm
-Description: Force Instagram LiquidGlass UI flags.
-Maintainer: Vader
-Author: Vader
-Section: Tweaks
-Depends: mobilesubstrate

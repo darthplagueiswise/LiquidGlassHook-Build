@@ -1,18 +1,19 @@
-TARGET := iphone:clang:latest
-ARCHS  := arm64
+# Stand-alone Makefile (no Theos, no Logos)
 
-INSTALL_TARGET_PROCESSES = Instagram
+SDK     := $(shell xcrun --sdk iphoneos --show-sdk-path)
+CC      := xcrun --sdk iphoneos clang
+CFLAGS  := -Os -fobjc-arc -isysroot $(SDK) -arch arm64 -miphoneos-version-min=17.0 -Ifishhook
+LDFLAGS := -dynamiclib -isysroot $(SDK) -arch arm64 \
+           -framework Foundation -framework UIKit \
+           -install_name @rpath/LiquidGlassIGHook.dylib
 
-include $(THEOS)/makefiles/common.mk
+TARGET  := LiquidGlassIGHook.dylib
+SRC     := LiquidGlassIGHook.m fishhook/fishhook.c
 
-TWEAK_NAME = LiquidGlassHook
+all: $(TARGET)
 
-$(TWEAK_NAME)_FILES      = $(wildcard src/*.xm)
-$(TWEAK_NAME)_FRAMEWORKS = UIKit Foundation
-$(TWEAK_NAME)_CFLAGS     = -fobjc-arc
-$(TWEAK_NAME)_LDFLAGS    = -Wl,-install_name,@executable_path/LiquidGlassIGHook.dylib
+$(TARGET): $(SRC)
+$(CC) $(CFLAGS) $(SRC) -o $@ $(LDFLAGS)
 
-include $(THEOS_MAKE_PATH)/tweak.mk
-
-after-install::
-	@echo "✅  Installed LiquidGlassHook"
+clean:
+rm -f $(TARGET) *.o
