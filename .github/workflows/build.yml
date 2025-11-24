@@ -1,34 +1,47 @@
-name: build
+name: Build
 
 on:
   push:
     branches: ["main", "master"]
-  workflow_dispatch: {}
+  pull_request:
+  workflow_dispatch:
 
 jobs:
-  build-tweak:
+  build:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
 
+      - name: Install dependencies
+        run: |
+          brew install ldid dpkg fakeroot
+
       - name: Set up Theos
         run: |
           git clone --recursive https://github.com/theos/theos.git "$HOME/theos"
-          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
-          echo "THEOS_MAKE_PATH=$HOME/theos/makefiles" >> $GITHUB_ENV
+          echo "THEOS=$HOME/theos" >> "$GITHUB_ENV"
+          echo "THEOS_MAKE_PATH=$HOME/theos/makefiles" >> "$GITHUB_ENV"
 
-      - name: Build tweak
+      - name: Build package
+        env:
+          THEOS: ${{ env.THEOS }}
+          THEOS_MAKE_PATH: ${{ env.THEOS_MAKE_PATH }}
         run: |
           make clean
           make package FINALPACKAGE=1
 
-      - name: Upload artifacts
+      - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
         with:
-          name: LiquidGlassHook-build
-          path: |
-            packages/*.deb
-            .theos/obj/*.dylib
-          if-no-files-found: ignore
+          name: liquidglasshook-deb
+          path: packages/*.deb
+          if-no-files-found: error
+
+      - name: Upload .dylib artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: liquidglasshook-dylib
+          path: .theos/obj/**/*.dylib
+          if-no-files-found: warn
